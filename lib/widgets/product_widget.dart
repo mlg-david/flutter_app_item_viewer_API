@@ -4,7 +4,7 @@ import 'package:item_viewer_app/pages/product_details_page.dart';
 
 class ProductWidget extends StatelessWidget {
   const ProductWidget({super.key, required this.product});
-  final ProductModel product;
+  final Map product;
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +12,7 @@ class ProductWidget extends StatelessWidget {
       onTap: () {
         Navigator.push(context, MaterialPageRoute(
           builder: (context) {
-            return ProductDetailPage(id: product.id ?? 0);
+            return ProductDetailPage(id: product['id'] ?? 0);
           },
         ));
       },
@@ -37,7 +37,7 @@ class ProductWidget extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  '${product.thumbnail}',
+                  '${product['thumbnail']}',
                   fit: BoxFit.cover,
                   width: 120,
                   height: 120,
@@ -52,7 +52,7 @@ class ProductWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${product.title}',
+                      '${product['title']}',
                       maxLines: 1,
                       style: const TextStyle(
                         fontSize: 18,
@@ -61,7 +61,7 @@ class ProductWidget extends StatelessWidget {
                     ),
                     SizedBox(height: 10),
                     Text(
-                      'Stock: ${product.stock}',
+                      'Stock: ${product['stock']}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.normal,
@@ -79,10 +79,10 @@ class ProductWidget extends StatelessWidget {
                 children: [
                   Column(
                     children: [
-                      product.discountPercentage! <= 0
+                      product['discountPercentage']! <= 0
                           ? Text('')
                           : Text(
-                              '${product.discountPercentage}\% OFF',
+                              '${product['discountPercentage']}\% OFF',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(.5),
                                 fontSize: 12,
@@ -90,7 +90,7 @@ class ProductWidget extends StatelessWidget {
                               ),
                             ),
                       Text(
-                        '\$${product.price}',
+                        '\$${product['price']}',
                         style: const TextStyle(
                           color: Colors.orange,
                           fontSize: 18,

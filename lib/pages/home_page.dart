@@ -1,10 +1,6 @@
-import 'dart:math';
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:item_viewer_app/widgets/product_widget.dart';
-
-import '../models/product_model.dart';
 import '../services/api_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,66 +11,73 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int skip = 0;
   final int limit = 10;
-  bool isFirstLoadRunning = false;
+  int skip = 0;
+  bool _isFirstLoadRunning = false;
   bool hasNextPage = true;
-  bool isLoadMoreRunning = false;
-  late Future<List<ProductModel>> products;
-  List<ProductModel> prevProducts = [];
+  bool _isLoadMoreRunning = false;
 
-  void _firstLoad() async {
+  List post = [];
+
+//Run on the first load to get products
+  void firstLoad() async {
     setState(() {
-      isFirstLoadRunning = true;
+      _isFirstLoadRunning = true;
     });
-    products = getProductsWithLimit(limit, skip);
+
+    var jsonData = await getProductsWithLimit(limit, skip);
+
+    if (jsonData.isNotEmpty) {
+      setState(() {
+        post = jsonData['products'] as List;
+      });
+    }
+
     setState(() {
-      isFirstLoadRunning = false;
+      _isFirstLoadRunning = false;
     });
   }
 
-  void loadMore() {
+//Function to get more products and append on the previously fetched ones
+  void loadMore() async {
     if (hasNextPage == true &&
-        isFirstLoadRunning == false &&
-        isLoadMoreRunning == false) {
+        _isFirstLoadRunning == false &&
+        _isLoadMoreRunning == false &&
+        _controller.position.extentAfter < 300) {
       setState(() {
-        isLoadMoreRunning = true;
-        skip += 9;
+        _isLoadMoreRunning = true;
       });
+      skip += 9;
 
-      // Future<List<ProductModel>> temp =
-      //     appendElements(getProductsWithLimit(limit, skip), prevProducts);
-      // products = temp;
+      var jsonData = await getProductsWithLimit(limit, skip);
+      final List fetchedPost = jsonData['products'] as List;
+
+      if (fetchedPost.isNotEmpty) {
+        setState(() {
+          post.addAll(fetchedPost);
+        });
+      } else {
+        setState(() {
+          hasNextPage = false;
+        });
+      }
 
       setState(() {
-        isLoadMoreRunning = false;
+        _isLoadMoreRunning = false;
       });
     }
   }
 
-  Future<List<ProductModel>> appendElements(
-      Future<List<ProductModel>> listFuture,
-      List<ProductModel> elementsToAdd) async {
-    print('PREV LENGHT ${elementsToAdd.length}');
-
-    final list = await listFuture;
-    list.addAll(elementsToAdd);
-    setState(() {
-      prevProducts.clear();
-      print('LIST LENGHT ${prevProducts.length}');
-    });
-    return list;
-  }
-
+  late ScrollController _controller;
   @override
   void initState() {
     super.initState();
-    _firstLoad();
+    firstLoad();
+    _controller = ScrollController()..addListener(loadMore);
   }
 
   @override
   Widget build(BuildContext context) {
-    _firstLoad();
     return Scaffold(
       backgroundColor: Colors.grey[900],
       //AppBar
@@ -119,7 +122,7 @@ class _HomePageState extends State<HomePage> {
       ),
       //Body
       body: SingleChildScrollView(
-        // controller: _controller,
+        controller: _controller,
         child: Column(
           children: [
             Padding(
@@ -162,42 +165,42 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-
-            FutureBuilder<List<ProductModel>?>(
-              future: products,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return GridView.builder(
+            _isFirstLoadRunning
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : GridView.builder(
                     physics: NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
-                    itemCount: snapshot.data?.length,
+                    itemCount: post.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: (150 / 195),
                     ),
                     itemBuilder: (context, index) {
-                      print(snapshot.data![index].title);
-                      // prevProducts.add(snapshot.data![index]);
-                      return ProductWidget(product: snapshot.data![index]);
+                      return ProductWidget(product: post[index]);
                     },
-                  );
-                } else if (snapshot.hasError) {
-                  print(snapshot);
-                  return const Text("Error");
-                }
-                return const Center(child: CircularProgressIndicator());
-              },
-            ),
+                  ),
 
-            IconButton(
-              onPressed: loadMore,
-              icon: Icon(Icons.add),
-            ),
+            //Show Loading when fetching new Products
+            if (_isLoadMoreRunning)
+              const Padding(
+                padding: EdgeInsets.only(top: 10, bottom: 10),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
 
-            isLoadMoreRunning
-                ? const Center(child: CircularProgressIndicator())
-                : const SizedBox(height: 0)
+            //Display a message when all products has been fetched
+            if (!hasNextPage)
+              Container(
+                padding: const EdgeInsets.only(top: 10, bottom: 10),
+                color: Colors.orange,
+                child: const Center(
+                  child: Text('No more products to show'),
+                ),
+              )
           ],
         ),
       ),
